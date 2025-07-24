@@ -6,67 +6,29 @@
     <title>Android ↔ JS 交互</title>
     <style>
         *{box-sizing:border-box;margin:0;padding:0}
-        body{
-            font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB",Arial,sans-serif;
-            padding:12px;
-            background:#f5f5f5;
-        }
-        h2{
-            font-size:18px;
-            margin:8px 0 12px;
-        }
-        .btn-grid{
-            display:flex;
-            flex-wrap:wrap;
-            justify-content:flex-start;
-            gap:8px;
-        }
-        button{
-            width:calc((100% - 16px) / 3);
-            font-size:15px;
-            padding:10px 0;
-            border:none;
-            border-radius:6px;
-            background:#0066ff;
-            color:#fff;
-        }
-        h3{
-            margin:16px 0 6px;
-            font-size:16px;
-        }
-        textarea{
-            width:100%;
-            height:540px;           /* 3 倍高度 */
-            font-size:14px;
-            border:1px solid #ccc;
-            border-radius:4px;
-            padding:6px;
-            resize:none;
-        }
-        #clearBtn{
-            margin-top:8px;
-            width:100%;
-            padding:10px 0;
-            font-size:15px;
-            border:none;
-            border-radius:6px;
-            background:#ff3b30;
-            color:#fff;
-        }
+        body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB",Arial,sans-serif;padding:12px;background:#f5f5f5;}
+        h2{font-size:18px;margin:8px 0 12px;}
+        .btn-grid{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:8px;}
+        button{width:calc((100% - 16px) / 3);font-size:15px;padding:10px 0;border:none;border-radius:6px;background:#0066ff;color:#fff;}
+        h3{margin:16px 0 6px;font-size:16px;}
+        textarea{width:100%;height:540px;font-size:14px;border:1px solid #ccc;border-radius:4px;padding:6px;resize:none;}
+        #clearBtn{margin-top:8px;width:100%;padding:10px 0;font-size:15px;border:none;border-radius:6px;background:#ff3b30;color:#fff;}
+        /* 图片展示区域 */
+        #imgContainer{margin-top:12px;text-align:center;}
+        #imgContainer img{max-width:100%;border:1px solid #ddd;border-radius:4px;}
     </style>
 </head>
 <body>
 
 <h2>点击按钮调用 Android 方法</h2>
-
-<!-- 按钮网格：一排 3 个，左对齐 -->
 <div class="btn-grid" id="buttons"></div>
 
 <h3>Android 返回结果：</h3>
 <textarea id="result" readonly></textarea>
-
-<!-- 清空按钮 -->
 <button id="clearBtn">清空</button>
+
+<!-- 新增：图片展示区 -->
+<div id="imgContainer"></div>
 
 <script>
     /* 需要展示的 key（无 8、9） */
@@ -81,21 +43,16 @@
         container.appendChild(btn);
     });
 
-    /* 构造并发送数据到 Android */
+    /* 发送数据到 Android */
     function sendToAndroid(key){
         let msg = {key, value:`这是来自 JS 的 Key ${key} 请求`};
-
         switch(key){
-            case 1:
-            case 2:
-                msg.imgType = 'ocr';
-                break;
+            case 1: case 2: msg.imgType = 'ocr'; break;
             case 4:
                 msg.link = 'https://www.xiaomiev.com/';
                 msg.out = Math.random() < 0.5;
                 break;
         }
-
         const jsonStr = JSON.stringify(msg);
         if(window.Android && window.Android.callAndroid){
             window.Android.callAndroid(jsonStr);
@@ -104,16 +61,34 @@
         }
     }
 
-    /* Android 回调函数 */
+    /* Android 回调函数：处理文本 + 图片 */
     function callJs(jsonStr){
-        const box = document.getElementById('result');
+        const box   = document.getElementById('result');
+        const imgBox= document.getElementById('imgContainer');
         box.value += `${new Date().toLocaleTimeString()} 收到：\n${jsonStr}\n\n`;
         box.scrollTop = box.scrollHeight;
+
+        try{
+            const obj = JSON.parse(jsonStr);
+            if(obj.imgBase64){
+                /* 创建或替换图片 */
+                imgBox.innerHTML = '';   // 先清空
+                const img = document.createElement('img');
+                img.src = 'data:image/*;base64,' + obj.imgBase64;
+                img.alt = 'Android 返回图片';
+                imgBox.appendChild(img);
+            }else{
+                imgBox.innerHTML = '';   // 无图则清空
+            }
+        }catch(e){
+            imgBox.innerHTML = '';       // JSON 异常也清空
+        }
     }
 
     /* 清空按钮事件 */
     document.getElementById('clearBtn').onclick = () => {
         document.getElementById('result').value = '';
+        document.getElementById('imgContainer').innerHTML = '';
     };
 </script>
 
